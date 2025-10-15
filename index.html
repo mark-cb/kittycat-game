@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>KittyCat - Catch the Flying Fish!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', cursive, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
+        }
+
+        h1 {
+            font-size: 4em;
+            color: #ff6b9d;
+            text-shadow: 4px 4px 0px #ffd93d, 8px 8px 0px #6bcf7f;
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .subtitle {
+            font-size: 1.8em;
+            color: #764ba2;
+            margin-bottom: 40px;
+        }
+
+        .btn {
+            font-size: 2em;
+            padding: 20px 60px;
+            background: linear-gradient(135deg, #ffd93d 0%, #ff6b9d 100%);
+            border: 5px solid white;
+            border-radius: 50px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #d63384;
+            transition: transform 0.1s;
+            font-family: inherit;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #d63384;
+        }
+
+        #game-area {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3em;
+            color: white;
+            text-shadow: 3px 3px 0px #ff6b9d, 6px 6px 0px #764ba2;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .cat {
+            position: absolute;
+            bottom: 20px;
+            font-size: 4em;
+            cursor: pointer;
+            animation: catBounce 1s ease-in-out infinite;
+        }
+
+        @keyframes catBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .fish {
+            position: absolute;
+            font-size: 3em;
+            cursor: pointer;
+            transition: transform 0.1s;
+            z-index: 50;
+        }
+
+        .fish:active {
+            transform: scale(1.3) rotate(15deg);
+        }
+
+        /* Sparkle effect */
+        .sparkle {
+            position: absolute;
+            font-size: 2em;
+            pointer-events: none;
+            animation: sparkleFloat 1s ease-out forwards;
+            z-index: 200;
+        }
+
+        @keyframes sparkleFloat {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(0.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(1.5);
+            }
+        }
+
+        /* Score popup */
+        .score-popup {
+            position: absolute;
+            font-size: 2.5em;
+            color: #ffd93d;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #ff6b9d;
+            pointer-events: none;
+            animation: scorePopup 1s ease-out forwards;
+            z-index: 150;
+        }
+
+        @keyframes scorePopup {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.5);
+            }
+            50% {
+                transform: translateY(-50px) scale(1.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1);
+            }
+        }
+
+        /* Floating decorations */
+        .decoration {
+            position: absolute;
+            font-size: 2em;
+            opacity: 0.6;
+            pointer-events: none;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-30px) rotate(10deg);
+            }
+        }
+
+        /* Cat celebration */
+        .cat.celebrating {
+            animation: celebrate 0.5s ease-in-out;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-30px) rotate(-15deg); }
+            50% { transform: translateY(-40px) rotate(0deg); }
+            75% { transform: translateY(-30px) rotate(15deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <h1>🐱 KittyCat 🐱</h1>
+            <p class="subtitle">Catch the Flying Fish!</p>
+            <button class="btn" id="start-btn">START</button>
+        </div>
+
+        <!-- Game Area -->
+        <div id="game-area">
+            <div id="score-display">Score: <span id="score">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        const game = {
+            score: 0,
+            isPlaying: false
+        };
+
+        // DOM elements
+        const startScreen = document.getElementById('start-screen');
+        const gameArea = document.getElementById('game-area');
+        const startBtn = document.getElementById('start-btn');
+        const scoreDisplay = document.getElementById('score');
+
+        // Start game
+        startBtn.addEventListener('click', startGame);
+
+        function startGame() {
+            game.score = 0;
+            game.isPlaying = true;
+            scoreDisplay.textContent = game.score;
+            
+            // Hide start screen, show game
+            startScreen.classList.add('hidden');
+            gameArea.style.display = 'block';
+        }
+
+        function updateScore(points) {
+            game.score += points;
+            scoreDisplay.textContent = game.score;
+        }
+
+        // Arrays to hold game objects
+        const cats = [];
+        const fish = [];
+
+        // Fish colors for variety
+        const fishEmojis = ['🐟', '🐠', '🐡'];
+        const catEmojis = ['😺', '😸', '😻'];
+
+        // Create cats at the bottom
+        function createCats() {
+            const numCats = 3;
+            const spacing = window.innerWidth / (numCats + 1);
+            
+            for (let i = 0; i < numCats; i++) {
+                const cat = document.createElement('div');
+                cat.className = 'cat';
+                cat.textContent = catEmojis[i % catEmojis.length];
+                cat.style.left = `${spacing * (i + 1) - 30}px`;
+                gameArea.appendChild(cat);
+                cats.push(cat);
+            }
+        }
+
+        // Create floating decorations
+        function createDecorations() {
+            const decorationEmojis = ['☁️', '🦋', '🧶', '🌸', '🎈'];
+            const numDecorations = 8;
+            
+            for (let i = 0; i < numDecorations; i++) {
+                const decoration = document.createElement('div');
+                decoration.className = 'decoration';
+                decoration.textContent = decorationEmojis[Math.floor(Math.random() * decorationEmojis.length)];
+                
+                // Random position
+                decoration.style.left = `${Math.random() * (window.innerWidth - 50)}px`;
+                decoration.style.top = `${Math.random() * (window.innerHeight * 0.6)}px`;
+                
+                // Random animation delay for variety
+                decoration.style.animationDelay = `${Math.random() * 4}s`;
+                
+                gameArea.appendChild(decoration);
+            }
+        }
+
+        // Create a fish
+        function spawnFish() {
+            if (!game.isPlaying) return;
+
+            const fish = document.createElement('div');
+            fish.className = 'fish';
+            fish.textContent = fishEmojis[Math.floor(Math.random() * fishEmojis.length)];
+            
+            // Random starting position (top of screen)
+            const startX = Math.random() * (window.innerWidth - 100);
+            const startY = -50;
+            fish.style.left = `${startX}px`;
+            fish.style.top = `${startY}px`;
+            
+            // Random direction and speed
+            const speedX = (Math.random() - 0.5) * 4;
+            const speedY = 2 + Math.random() * 2;
+            
+            fish.dataset.speedX = speedX;
+            fish.dataset.speedY = speedY;
+            
+            gameArea.appendChild(fish);
+            
+            // Touch/click event to catch fish
+            fish.addEventListener('click', () => catchFish(fish));
+            fish.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                catchFish(fish);
+            });
+            
+            return fish;
+        }
+
+        // Create sparkle effect
+        function createSparkles(x, y) {
+            const sparkleEmojis = ['✨', '⭐', '💫', '🌟'];
+            const numSparkles = 6;
+            
+            for (let i = 0; i < numSparkles; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.textContent = sparkleEmojis[Math.floor(Math.random() * sparkleEmojis.length)];
+                sparkle.style.left = `${x}px`;
+                sparkle.style.top = `${y}px`;
+                
+                // Random direction for each sparkle
+                const angle = (Math.PI * 2 * i) / numSparkles;
+                const distance = 50 + Math.random() * 50;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                sparkle.style.setProperty('--tx', `${tx}px`);
+                sparkle.style.setProperty('--ty', `${ty}px`);
+                
+                gameArea.appendChild(sparkle);
+                
+                // Remove after animation
+                setTimeout(() => sparkle.remove(), 1000);
+            }
+        }
+
+        // Create score popup
+        function createScorePopup(x, y, points) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = `+${points}`;
+            popup.style.left = `${x}px`;
+            popup.style.top = `${y}px`;
+            
+            gameArea.appendChild(popup);
+            
+            // Remove after animation
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        // Catch a fish
+        function catchFish(fish) {
+            if (!game.isPlaying) return;
+            
+            // Get fish position for effects
+            const fishX = parseFloat(fish.style.left);
+            const fishY = parseFloat(fish.style.top);
+            
+            // Create sparkles at fish position
+            createSparkles(fishX, fishY);
+            
+            // Create score popup
+            createScorePopup(fishX, fishY, 10);
+            
+            // Remove fish
+            fish.remove();
+            
+            // Update score
+            updateScore(10);
+            
+            // Make a random cat celebrate
+            const randomCat = cats[Math.floor(Math.random() * cats.length)];
+            randomCat.classList.add('celebrating');
+            randomCat.textContent = '😻';
+            setTimeout(() => {
+                randomCat.classList.remove('celebrating');
+                randomCat.textContent = catEmojis[cats.indexOf(randomCat) % catEmojis.length];
+            }, 500);
+        }
+
+        // Move all fish
+        function moveFish() {
+            const allFish = document.querySelectorAll('.fish');
+            
+            allFish.forEach(fish => {
+                const currentX = parseFloat(fish.style.left);
+                const currentY = parseFloat(fish.style.top);
+                const speedX = parseFloat(fish.dataset.speedX);
+                const speedY = parseFloat(fish.dataset.speedY);
+                
+                let newX = currentX + speedX;
+                let newY = currentY + speedY;
+                
+                // Bounce off walls
+                if (newX <= 0 || newX >= window.innerWidth - 50) {
+                    fish.dataset.speedX = -speedX;
+                    newX = currentX - speedX;
+                }
+                
+                fish.style.left = `${newX}px`;
+                fish.style.top = `${newY}px`;
+                
+                // Remove if off screen (bottom)
+                if (newY > window.innerHeight) {
+                    fish.remove();
+                }
+            });
+        }
+
+        // Game loop
+        let gameInterval;
+        let spawnInterval;
+
+        function startGame() {
+            game.score = 0;
+            game.isPlaying = true;
+            scoreDisplay.textContent = game.score;
+            
+            // Clear any existing cats and fish
+            cats.forEach(cat => cat.remove());
+            cats.length = 0;
+            document.querySelectorAll('.fish').forEach(f => f.remove());
+            
+            // Hide start screen, show game
+            startScreen.classList.add('hidden');
+            gameArea.style.display = 'block';
+            
+            // Create cats
+            createCats();
+            
+            // Add floating decorations
+            createDecorations();
+            
+            // Start spawning fish
+            spawnInterval = setInterval(() => {
+                if (game.isPlaying) {
+                    spawnFish();
+                }
+            }, 1500); // Spawn a fish every 1.5 seconds
+            
+            // Start game loop
+            gameInterval = setInterval(() => {
+                if (game.isPlaying) {
+                    moveFish();
+                }
+            }, 1000 / 60); // 60 FPS
+        }
+
+        console.log('KittyCat game loaded! Ready to catch fish! 🐟');
+    </script>
+</body>
+</html>
