@@ -228,6 +228,16 @@
         <!-- Game Area -->
         <div id="game-area">
             <div id="score-display">Score: <span id="score">0</span></div>
+            <div id="timer-display" style="position: absolute; top: 20px; right: 20px; font-size: 2.5em; color: white; text-shadow: 3px 3px 0px #ff6b9d; font-weight: bold; z-index: 100;">⏰ <span id="timer">60</span></div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.95); z-index: 1000;">
+            <h2 style="font-size: 3.5em; color: #ff6b9d; text-shadow: 3px 3px 0px #ffd93d; margin-bottom: 20px;">🎉 Game Over! 🎉</h2>
+            <p style="font-size: 2.5em; color: #764ba2; margin-bottom: 10px;">Your Score:</p>
+            <p style="font-size: 4em; color: #6bcf7f; font-weight: bold; text-shadow: 3px 3px 0px #4facfe; margin-bottom: 30px;"><span id="final-score">0</span></p>
+            <p style="font-size: 2em; color: #ff6b9d; margin-bottom: 40px;"><span id="encouragement">Great job!</span></p>
+            <button class="btn" id="play-again-btn">PLAY AGAIN</button>
         </div>
     </div>
 
@@ -235,7 +245,9 @@
         // Game state
         const game = {
             score: 0,
-            isPlaying: false
+            isPlaying: false,
+            timeLeft: 60,
+            difficultyLevel: 1
         };
 
         // DOM elements
@@ -243,19 +255,15 @@
         const gameArea = document.getElementById('game-area');
         const startBtn = document.getElementById('start-btn');
         const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const encouragementText = document.getElementById('encouragement');
+        const playAgainBtn = document.getElementById('play-again-btn');
 
         // Start game
         startBtn.addEventListener('click', startGame);
-
-        function startGame() {
-            game.score = 0;
-            game.isPlaying = true;
-            scoreDisplay.textContent = game.score;
-            
-            // Hide start screen, show game
-            startScreen.classList.add('hidden');
-            gameArea.style.display = 'block';
-        }
+        playAgainBtn.addEventListener('click', startGame);
 
         function updateScore(points) {
             game.score += points;
@@ -320,9 +328,10 @@
             fish.style.left = `${startX}px`;
             fish.style.top = `${startY}px`;
             
-            // Random direction and speed
-            const speedX = (Math.random() - 0.5) * 4;
-            const speedY = 2 + Math.random() * 2;
+            // Speed increases with difficulty level
+            const difficultyMultiplier = 1 + (game.difficultyLevel * 0.3);
+            const speedX = (Math.random() - 0.5) * 4 * difficultyMultiplier;
+            const speedY = (2 + Math.random() * 2) * difficultyMultiplier;
             
             fish.dataset.speedX = speedX;
             fish.dataset.speedY = speedY;
@@ -443,19 +452,33 @@
         // Game loop
         let gameInterval;
         let spawnInterval;
+        let timerInterval;
+        let difficultyInterval;
 
         function startGame() {
+            // Reset game state
             game.score = 0;
             game.isPlaying = true;
+            game.timeLeft = 60;
+            game.difficultyLevel = 1;
             scoreDisplay.textContent = game.score;
+            timerDisplay.textContent = game.timeLeft;
             
-            // Clear any existing cats and fish
+            // Clear any existing cats, fish, and decorations
             cats.forEach(cat => cat.remove());
             cats.length = 0;
             document.querySelectorAll('.fish').forEach(f => f.remove());
+            document.querySelectorAll('.decoration').forEach(d => d.remove());
             
-            // Hide start screen, show game
+            // Clear any intervals
+            clearInterval(gameInterval);
+            clearInterval(spawnInterval);
+            clearInterval(timerInterval);
+            clearInterval(difficultyInterval);
+            
+            // Hide screens, show game
             startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
             gameArea.style.display = 'block';
             
             // Create cats
@@ -464,12 +487,52 @@
             // Add floating decorations
             createDecorations();
             
-            // Start spawning fish
+            // Start countdown timer
+            timerInterval = setInterval(() => {
+                if (game.isPlaying) {
+                    game.timeLeft--;
+                    timerDisplay.textContent = game.timeLeft;
+                    
+                    // Flash timer when low
+                    if (game.timeLeft <= 10) {
+                        timerDisplay.style.color = '#ff6b9d';
+                        timerDisplay.style.transform = 'scale(1.2)';
+                        setTimeout(() => {
+                            timerDisplay.style.transform = 'scale(1)';
+                        }, 100);
+                    }
+                    
+                    // Game over when time runs out
+                    if (game.timeLeft <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+            
+            // Increase difficulty over time
+            difficultyInterval = setInterval(() => {
+                if (game.isPlaying && game.difficultyLevel < 5) {
+                    game.difficultyLevel++;
+                    console.log(`Difficulty increased to level ${game.difficultyLevel}`);
+                    
+                    // Update spawn rate for new difficulty
+                    clearInterval(spawnInterval);
+                    const baseInterval = 1500;
+                    const newInterval = Math.max(800, baseInterval - (game.difficultyLevel * 150));
+                    spawnInterval = setInterval(() => {
+                        if (game.isPlaying) {
+                            spawnFish();
+                        }
+                    }, newInterval);
+                }
+            }, 12000); // Increase difficulty every 12 seconds
+            
+            // Start spawning fish (speed increases with difficulty)
             spawnInterval = setInterval(() => {
                 if (game.isPlaying) {
                     spawnFish();
                 }
-            }, 1500); // Spawn a fish every 1.5 seconds
+            }, 1500);
             
             // Start game loop
             gameInterval = setInterval(() => {
@@ -477,6 +540,36 @@
                     moveFish();
                 }
             }, 1000 / 60); // 60 FPS
+        }
+
+        // End game
+        function endGame() {
+            game.isPlaying = false;
+            
+            // Clear intervals
+            clearInterval(gameInterval);
+            clearInterval(spawnInterval);
+            clearInterval(timerInterval);
+            clearInterval(difficultyInterval);
+            
+            // Show final score
+            finalScoreDisplay.textContent = game.score;
+            
+            // Show encouraging message based on score
+            let message = 'Great job! 😺';
+            if (game.score >= 200) {
+                message = 'AMAZING! You\'re a superstar! 🌟';
+            } else if (game.score >= 150) {
+                message = 'Fantastic! The cats love you! 😻';
+            } else if (game.score >= 100) {
+                message = 'Awesome work! 🎉';
+            } else if (game.score >= 50) {
+                message = 'Nice job! Keep it up! 😸';
+            }
+            encouragementText.textContent = message;
+            
+            // Show game over screen
+            gameOverScreen.classList.remove('hidden');
         }
 
         console.log('KittyCat game loaded! Ready to catch fish! 🐟');
