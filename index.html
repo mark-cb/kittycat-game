@@ -105,11 +105,13 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 3em;
+            font-size: clamp(1.5em, 6vw, 3em);
             color: white;
             text-shadow: 3px 3px 0px #ff6b9d, 6px 6px 0px #764ba2;
             font-weight: bold;
             z-index: 100;
+            white-space: nowrap;
+            padding: 0 20px;
         }
 
         .hidden {
